@@ -17,7 +17,7 @@ FROM --platform=$TARGETPLATFORM centos:7
 
 #install HTTPD
 RUN yum -y update
-RUN yum -y install httpd mod_ssl procps haproxy iputils tree telnet
+RUN yum -y install httpd mod_ssl procps haproxy iputils tree telnet dos2unix
 
 #remove default CentOS config
 RUN rm -rf /etc/httpd/conf/*
@@ -59,6 +59,7 @@ RUN ln -s /etc/httpd/conf.dispatcher.d/available_farms/002_ams_publish_farm.any 
 # Install dispatcher
 ARG TARGETARCH
 COPY scripts/setup.sh /
+RUN dos2unix /setup.sh
 RUN chmod +x /setup.sh
 RUN ./setup.sh
 RUN rm /setup.sh
@@ -83,6 +84,7 @@ RUN mkdir -p /etc/ssl/docker && \
 COPY haproxy/haproxy.cfg /etc/haproxy
 
 COPY scripts/launch.sh /
+RUN dos2unix /launch.sh
 RUN chmod +x /launch.sh
 
 COPY LICENSE /
