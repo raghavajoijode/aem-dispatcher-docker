@@ -26,6 +26,12 @@ RUN rm -rf /etc/httpd/conf.modules.d/*
 
 #Copy the AMS base files into the image.
 COPY ams/2.6/etc/httpd /etc/httpd
+
+### PROJECT START ####
+#COPY ams/2.6/project/src /etc/httpd
+### PROJECT END ####
+
+RUN rm -rf /etc/httpd/conf.d/enabled_vhosts
 RUN mkdir /etc/httpd/conf.d/enabled_vhosts
 RUN ln -s /etc/httpd/conf.d/available_vhosts/aem_author.vhost /etc/httpd/conf.d/enabled_vhosts/aem_author.vhost
 RUN ln -s /etc/httpd/conf.d/available_vhosts/aem_flush_author.vhost /etc/httpd/conf.d/enabled_vhosts/aem_flush_author.vhost
@@ -33,12 +39,22 @@ RUN ln -s /etc/httpd/conf.d/available_vhosts/aem_publish.vhost /etc/httpd/conf.d
 RUN ln -s /etc/httpd/conf.d/available_vhosts/aem_flush.vhost /etc/httpd/conf.d/enabled_vhosts/aem_flush.vhost
 RUN ln -s /etc/httpd/conf.d/available_vhosts/aem_health.vhost /etc/httpd/conf.d/enabled_vhosts/aem_health.vhost
 
+### PROJECT START ####
+#RUN ln -s /etc/httpd/conf.d/available_vhosts/aem_lc.vhost /etc/httpd/conf.d/enabled_vhosts/aem_lc.vhost
+#RUN ln -s /etc/httpd/conf.d/available_vhosts/project.vhost /etc/httpd/conf.d/enabled_vhosts/project.vhost
+### PROJECT END ####
+
+RUN rm -rf /etc/httpd/conf.dispatcher.d/enabled_farms
 RUN mkdir /etc/httpd/conf.dispatcher.d/enabled_farms
 RUN ln -s /etc/httpd/conf.dispatcher.d/available_farms/000_ams_catchall_farm.any /etc/httpd/conf.dispatcher.d/enabled_farms/000_ams_catchall_farm.any
 RUN ln -s /etc/httpd/conf.dispatcher.d/available_farms/001_ams_author_flush_farm.any /etc/httpd/conf.dispatcher.d/enabled_farms/001_ams_author_flush_farm.any
 RUN ln -s /etc/httpd/conf.dispatcher.d/available_farms/001_ams_publish_flush_farm.any /etc/httpd/conf.dispatcher.d/enabled_farms/001_ams_publish_flush_farm.any
 RUN ln -s /etc/httpd/conf.dispatcher.d/available_farms/002_ams_author_farm.any /etc/httpd/conf.dispatcher.d/enabled_farms/002_ams_author_farm.any
 RUN ln -s /etc/httpd/conf.dispatcher.d/available_farms/002_ams_publish_farm.any /etc/httpd/conf.dispatcher.d/enabled_farms/002_ams_publish_farm.any
+
+### PROJECT START ####
+#RUN ln -s /etc/httpd/conf.dispatcher.d/available_farms/project.any /etc/httpd/conf.dispatcher.d/enabled_farms/project.any
+### PROJECT END ####
 
 # Install dispatcher
 ARG TARGETARCH

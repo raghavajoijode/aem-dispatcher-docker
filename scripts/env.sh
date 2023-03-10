@@ -41,3 +41,7 @@ CRX_FILTER=deny
 ## WARNING: Set this to "allowed" on local dev environments that don't have fixed IPs
 ## Set to deny or comment out on prod environments
 DISPATCHER_FLUSH_FROM_ANYWHERE=allow
+
+### PROJECT Start ###
+# PROJECT_ENV=dev
+### PROJECT END ###
