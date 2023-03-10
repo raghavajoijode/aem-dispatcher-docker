@@ -1,4 +1,25 @@
 
+# Build Quickly
+
+```shell
+# BUILD
+docker buildx create --use
+docker buildx build --load -t dispatcher --platform=linux/amd64 .
+# Verify
+docker images
+
+# RUN
+docker run -p 80:8080 -p 443:8443 -itd --rm --mount type=bind,src=%cd%\logs,dst=/var/log/httpd --env-file scripts/env.sh --name dispatcher dispatcher
+
+# Verify
+docker container ps
+
+# Bash container
+docker exec -it dispatcher /bin/bash
+
+```
+
+
 # Dispatcher Docker image
 
 This is a simple dispatcher image that is very close to an AMS setup.
