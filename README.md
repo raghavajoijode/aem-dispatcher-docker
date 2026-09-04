@@ -1,50 +1,147 @@
 
-# Build Quickly
+# AEM Dispatcher Docker (Modernized - September 2026)
 
-```shell
-# BUILD
+## Quick Start
+
+### For Mac with Apple Silicon (M1/M2/M3/M4)
+
+```bash
+# 1. Create and use buildx builder (first time only)
 docker buildx create --use
-docker buildx build --load -t dispatcher --platform=linux/amd64 .
-# Verify
-docker images
 
-# RUN
-docker run -p 80:8080 -p 443:8443 -itd --rm --mount type=bind,src=%cd%\logs,dst=/var/log/httpd --env-file scripts/env.sh --name dispatcher dispatcher
+# 2. Build for ARM64 (Apple Silicon)
+docker buildx build --load -t dispatcher --platform=linux/arm64 .
 
-# Verify
+# 3. Verify the image was created
+docker images | grep dispatcher
+
+# 4. Run the container
+docker run -p 80:8080 -p 443:8443 -itd --rm \
+  --mount type=bind,src=$(pwd)/logs,dst=/var/log/httpd \
+  --env-file scripts/env.sh \
+  --name dispatcher \
+  dispatcher
+
+# 5. Verify container is running
 docker container ps
 
-# Bash container
+# 6. Access container shell
 docker exec -it dispatcher /bin/bash
-
 ```
 
+### For Intel/AMD Systems
 
-# Dispatcher Docker image
-
-This is a simple dispatcher image that is very close to an AMS setup.
-It builds on top of [centos7](https://hub.docker.com/_/centos/) since the AMS dispatcher is build on top of Redhat Enterprise Linux 7.7 and contains the default AMS Dispatcher 2.6 configuration.
-
-The default publish host has been set to `publish.docker.local` and the default renderer is set to `host.docker.internal:4503` which should point to the AEM instance running on your local computer.
-
-[HAProxy](https://www.haproxy.org/) has been embedded in the image to support SSL connections the mimic how AMS has setup their ELBs/AppGWs.
-
-Environmental variables are configured in `scripts/env.sh`
-
-# Basic Setup
-
-## Building the image
-
-We use docker's buildx to support multi-arch images.
-
-```shell
-docker buildx create --use
+```bash
+# Build for x86_64
 docker buildx build --load -t dispatcher --platform=linux/amd64 .
 ```
 
-To build for Apple M1/M2, use `--platform=linux/arm64` instead
+## What's New (September 2026 Update)
 
-Multi-arch images can be built, but can only be pushed to a remote registry and not be directly loaded in Docker desktop.
+This project has been modernized with:
+
+- **Base Image**: Upgraded from CentOS 7 (EOL) to AlmaLinux 9 (supported until 2032)
+- **ARM64 Support**: Full compatibility with Apple Silicon Macs (M1/M2/M3/M4)
+- **Security**: Modern SSL/TLS configuration (Mozilla v5.7), security headers, HSTS
+- **Dispatcher**: Updated configuration with detailed comments
+- **Documentation**: Clear, executable commands with explanations
+- **Performance**: Optimized HAProxy and Apache settings
+
+
+## About This Project
+
+This is an Adobe Managed Services (AMS) compatible dispatcher Docker image, forked from Adobe's original implementation and modernized for 2026.
+
+### Key Features
+
+- **AMS Compatibility**: Uses standard AMS 2.6 dispatcher configuration patterns
+- **Modern Base**: AlmaLinux 9 (RHEL-compatible, supported until 2032)
+- **Multi-Architecture**: Supports both x86_64 and ARM64 (Apple Silicon)
+- **SSL/TLS**: Modern cipher suites with HAProxy SSL termination
+- **Security**: Hardened configuration with security headers
+- **Local Development**: Optimized for Mac, Windows, and Linux development
+
+### Architecture
+
+```
+[Client Browser] 
+    → [HAProxy (SSL Termination on 8443)] 
+        → [Apache HTTPD with Dispatcher Module]
+            → [AEM Author (4502) / AEM Publish (4503)]
+```
+
+### Configuration Files
+
+| File | Purpose | Location |
+|------|---------|----------|
+| `Dockerfile` | Container definition with detailed comments | Root directory |
+| `scripts/env.sh` | Environment variables and connection settings | `scripts/` |
+| `haproxy/haproxy.cfg` | SSL termination and load balancing | `haproxy/` |
+| `ams/2.6/etc/httpd/` | Default AMS dispatcher configuration | `ams/2.6/etc/httpd/` |
+| `ams/2.6/project/src/` | Project-specific configuration (optional) | `ams/2.6/project/src/` |
+
+## Getting Started
+
+## Building the Docker Image
+
+### Prerequisites
+
+- Docker Desktop 4.12+ (with Buildx support)
+- For Mac users: Docker Desktop for Apple Silicon
+- 2GB+ free disk space
+- Network access to download dispatcher module
+
+### Build Commands
+
+#### For Apple Silicon Mac (M1/M2/M3/M4)
+```bash
+# Create buildx builder (first time only)
+docker buildx create --use --name multiarch-builder
+
+# Build for ARM64
+docker buildx build --load -t dispatcher --platform=linux/arm64 .
+
+# Alternative: Build and push to registry
+# docker buildx build --push -t yourregistry/dispatcher:latest --platform=linux/arm64,linux/amd64 .
+```
+
+#### For Intel/AMD Systems
+```bash
+# Build for x86_64
+docker buildx build --load -t dispatcher --platform=linux/amd64 .
+```
+
+#### Multi-Platform Build (Advanced)
+```bash
+# Build for both architectures (requires registry push)
+docker buildx build --push -t yourregistry/dispatcher:latest \
+  --platform=linux/arm64,linux/amd64 .
+```
+
+### Build Options Explained
+
+| Option | Purpose | Example Value |
+|--------|---------|---------------|
+| `--platform` | Target CPU architecture | `linux/arm64` (Apple Silicon), `linux/amd64` (Intel) |
+| `--load` | Load image into local Docker | Always use for local development |
+| `--push` | Push to registry | Use for CI/CD or sharing |
+| `-t` | Image tag name | `dispatcher:latest`, `myproject/dispatcher:v1.0` |
+
+### Verifying the Build
+
+```bash
+# Check built images
+docker images | grep dispatcher
+
+# Expected output:
+# dispatcher   latest    abc123def456   2 minutes ago   850MB
+
+# Inspect image architecture
+docker inspect dispatcher:latest | grep Architecture
+
+# Expected for Apple Silicon:
+# "Architecture": "arm64"
+```
 
 ## Checking the created image
 
@@ -54,31 +151,90 @@ REPOSITORY   TAG      IMAGE ID       CREATED        SIZE
 dispatcher   latest   6b4b91a23c06   1 minute ago   725MB
 ```
 
-## How to use the image
+## Running the Container
 
-You can run the image in two different ways
+### Basic Usage (Default Configuration)
 
-1. As a completely independent remote server
-   - This is a quick way to get dispatcher up and running locally and you're not planning to make any changes to the configuration files.
-2. By keeping the configuration files on your local system and mounting them when you start the image.
-   - This is the recommended way to start the image as it will allow you to quickly make changes and see them apply without the need to rebuild the container.
+```bash
+# Create logs directory (if it doesn't exist)
+mkdir -p logs
 
-### Running the image
-
-```shell
-docker run -p 80:8080 -p 443:8443 -itd --rm --env-file scripts/env.sh --name dispatcher dispatcher
+# Run with default AMS configuration
+docker run -p 80:8080 -p 443:8443 -itd --rm \
+  --mount type=bind,src=$(pwd)/logs,dst=/var/log/httpd \
+  --env-file scripts/env.sh \
+  --name dispatcher \
+  dispatcher
 ```
 
-| Quick Reference   |                                                              |
-| ----------------- | ------------------------------------------------------------ |
-| -p 80:8080        | map port 80 of the host to port 8080 of the container use -p 8080:8080 if port 80 already is in use on the host) |
-| -p 443:8443       | map port 443 of the host  to port 8443 of the container. (use -p 4443:8443 if port 443 already is in use on the host) |
-| -i                | keep STDIN open even if not attached ("interactive") and     |
-| -t                | allocate a pseudo-tty to allow interactive logins ("tty")    |
-| -d                | run docker detached in the background                        |
-| --rm              | automatically remove the container when it exits             |
-| --env-file        | Environment file to bind to the container                    |
-| --name dispatcher | assign name "dispatcher" to the container, consider setting a different name per project.                   |
+### Docker Run Options Explained
+
+| Option | Purpose | Recommended Value |
+|--------|---------|-------------------|
+| `-p 80:8080` | Map host port 80 → container port 8080 (HTTP) | Use `-p 8080:8080` if port 80 is busy |
+| `-p 443:8443` | Map host port 443 → container port 8443 (HTTPS) | Use `-p 8443:8443` for testing |
+| `-itd` | Interactive, TTY, Detached mode | Always use for background services |
+| `--rm` | Auto-remove container on exit | Recommended for development |
+| `--env-file` | Environment variables file | `scripts/env.sh` |
+| `--name` | Container name | `dispatcher` or project-specific |
+| `--mount` | Bind mount for logs | `type=bind,src=$(pwd)/logs,dst=/var/log/httpd` |
+
+### Port Mapping Scenarios
+
+```bash
+# Scenario 1: Standard ports (requires sudo on Linux)
+docker run -p 80:8080 -p 443:8443 ... dispatcher
+
+# Scenario 2: Alternative ports (no privileges needed)
+docker run -p 8080:8080 -p 8443:8443 ... dispatcher
+
+# Scenario 3: Custom port mapping
+docker run -p 30080:8080 -p 30443:8443 ... dispatcher
+```
+
+### Verifying Container Status
+
+```bash
+# Check running containers
+docker container ps
+
+# Check container logs
+docker logs dispatcher
+
+# Check container health
+docker inspect dispatcher | grep -A 5 -B 5 Health
+
+# Access container shell
+docker exec -it dispatcher /bin/bash
+
+# Stop the container
+docker stop dispatcher
+
+# Remove stopped containers
+docker container prune
+```
+
+## Configuration Methods
+
+You can use this container in three different ways:
+
+### 1. Default Configuration (Quick Start)
+- Uses built-in AMS 2.6 configuration
+- No local file dependencies
+- Rebuild required for configuration changes
+- **Best for**: Initial testing, demos, learning
+
+### 2. Mounted Configuration (Recommended for Development)
+- Mount local configuration files
+- Instant configuration updates (no rebuild)
+- Use provided helper scripts
+- **Best for**: Active development, testing changes
+
+### 3. Custom Docker Image (Production)
+- Create derivative Dockerfile
+- Bundle project-specific configuration
+- Push to container registry
+- **Best for**: Production deployments, team sharing
 
 ## Checking the container's current state
 
@@ -93,25 +249,63 @@ CONTAINER ID   IMAGE        COMMAND                  CREATED              STATUS
 The dispatcher maps `publish.docker.local` to the local publisher instance on port 4503. 
 Run the publisher and navigate to [http://publish.docker.local/content/we-retail/language-masters/en.html](http://publish.docker.local/content/we-retail/language-masters/en.html)
 
-## Adapting your localhost
+## Environment Configuration
 
-The image is based on the configuration used by AMS. If you are planning to deploy the configuration into AMS, please make sure to also read the section on **Immutable files**.
+### Host Configuration
 
-The configuration is environment agnostic. It is supposed to run as-is locally, on dev, stage and prod etc without any change. All environment specific variables are stored in a file `scripts/env.sh`.
+For local development, add these entries to your `/etc/hosts` file:
 
-The default configuration is
+```bash
+# macOS/Linux: Edit /etc/hosts (requires sudo)
+sudo nano /etc/hosts
 
-`author.docker.local` for the Author
-`publish.docker.local`for the Publisher
+# Add these lines:
+127.0.0.1       author.docker.local
+127.0.0.1       publish.docker.local
+127.0.0.1       host.docker.internal
 
-Make sure that both are mapped in your local `/etc/hosts` file.
-The Dispatcher connects to the Author and Publisher through `host.docker.internal` .
+# Windows: Edit C:\Windows\System32\drivers\etc\hosts
+# Add the same three lines
+```
 
-```shell
-$ cat /etc/hosts | grep docker.local
-127.0.0.1 author.docker.local
-127.0.0.1 publish.docker.local
-127.0.0.1 host.docker.internal
+### Environment Variables (`scripts/env.sh`)
+
+The `scripts/env.sh` file contains all environment-specific settings:
+
+```bash
+# Review and customize these settings:
+DISP_ID=docker                          # Unique dispatcher identifier
+AUTHOR_IP=host.docker.internal          # AEM Author instance
+AUTHOR_PORT=4502                        # Author port
+PUBLISH_IP=host.docker.internal         # AEM Publish instance  
+PUBLISH_PORT=4503                       # Publish port
+CRX_FILTER=deny                         # Security: deny CRXDE access
+DISPATCHER_FLUSH_FROM_ANYWHERE=allow    # Local dev: allow flush from any IP
+DISP_LOG_LEVEL=4                        # Debug logging (4=trace, 1=error)
+```
+
+### AEM Instance Configuration
+
+| Environment | AEM Author | AEM Publish | Notes |
+|-------------|------------|-------------|-------|
+| Local Dev | `localhost:4502` | `localhost:4503` | Default setup |
+| Docker Network | `host.docker.internal:4502` | `host.docker.internal:4503` | Cross-container |
+| Remote | `author.example.com:4502` | `publish.example.com:4503` | Production |
+
+### Testing Your Setup
+
+```bash
+# Test AEM Author connection
+curl -I http://author.docker.local:4502
+
+# Test AEM Publish connection  
+curl -I http://publish.docker.local:4503
+
+# Test through dispatcher (HTTP)
+curl -I http://publish.docker.local/content/we-retail/language-masters/en.html
+
+# Test through dispatcher (HTTPS)
+curl -k -I https://publish.docker.local/content/we-retail/language-masters/en.html
 ```
 
 # Using your own dispatcher config
